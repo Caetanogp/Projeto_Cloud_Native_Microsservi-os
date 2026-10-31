@@ -1,0 +1,16 @@
+{
+  "name": "ms-catalogo",
+  "version": "1.0.0",
+  "description": "Microsserviço de catálogo de produtos (Node.js + Express + MySQL)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5"
+  }
+}

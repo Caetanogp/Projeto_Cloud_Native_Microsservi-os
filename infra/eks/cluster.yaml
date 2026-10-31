@@ -1,0 +1,35 @@
+# Cluster EKS para conta AWS própria (eksctl cria as IAM roles necessárias).
+# No AWS Academy Learner Lab o eksctl não funciona: use o caminho B de docs/deploy-eks.md.
+#
+#   eksctl create cluster -f infra/eks/cluster.yaml
+#
+# Confira as versões do Kubernetes suportadas no momento: aws eks describe-cluster-versions
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: loja-cloud-native
+  region: us-east-1
+  version: "1.33"
+
+iam:
+  withOIDC: true
+
+managedNodeGroups:
+  - name: ng-loja
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 3
+    volumeSize: 30
+    iam:
+      withAddonPolicies:
+        ebs: true # permite ao driver EBS CSI criar os volumes dos bancos
+
+addons:
+  - name: vpc-cni
+  - name: coredns
+  - name: kube-proxy
+  - name: aws-ebs-csi-driver
+    wellKnownPolicies:
+      ebsCSIController: true

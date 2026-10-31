@@ -1,0 +1,33 @@
+# Acesso externo via NGINX Ingress Controller. Cada serviço serve a própria coleção de recursos,
+# então o roteamento é por prefixo de path, sem rewrite.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loja-ingress
+  namespace: loja
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /produtos
+            pathType: Prefix
+            backend:
+              service:
+                name: ms-catalogo
+                port:
+                  number: 3000
+          - path: /pedidos
+            pathType: Prefix
+            backend:
+              service:
+                name: ms-pedidos
+                port:
+                  number: 8000
+          - path: /notificacoes
+            pathType: Prefix
+            backend:
+              service:
+                name: ms-notificacoes
+                port:
+                  number: 8080

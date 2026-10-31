@@ -1,0 +1,106 @@
+# Banco exclusivo do ms-catalogo (Database per Service).
+# Nenhum outro microsserviço recebe estas credenciais nem enxerga este banco.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-catalogo-credentials
+  namespace: loja
+type: Opaque
+stringData:
+  root-password: root-catalogo-123
+  database: catalogo
+  user: catalogo
+  password: catalogo123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-catalogo
+  namespace: loja
+  labels:
+    app: mysql-catalogo
+spec:
+  type: ClusterIP
+  selector:
+    app: mysql-catalogo
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-catalogo
+  namespace: loja
+  labels:
+    app: mysql-catalogo
+spec:
+  serviceName: mysql-catalogo
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-catalogo
+  template:
+    metadata:
+      labels:
+        app: mysql-catalogo
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-catalogo-credentials
+                  key: root-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-catalogo-credentials
+                  key: database
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-catalogo-credentials
+                  key: user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-catalogo-credentials
+                  key: password
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\""]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/mysql
+              subPath: mysql # evita o diretório lost+found na raiz do volume EBS
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 2Gi

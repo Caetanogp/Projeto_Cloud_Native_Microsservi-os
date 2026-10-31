@@ -1,0 +1,120 @@
+# Ambiente local para desenvolvimento. A entrega final roda no Amazon EKS (veja docs/deploy-eks.md).
+# Os nomes dos serviços e as variáveis de ambiente são os mesmos do Kubernetes.
+services:
+  mysql-catalogo:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root-catalogo-123
+      MYSQL_DATABASE: catalogo
+      MYSQL_USER: catalogo
+      MYSQL_PASSWORD: catalogo123
+    volumes:
+      - mysql-catalogo-dados:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres-pedidos:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pedidos
+      POSTGRES_USER: pedidos
+      POSTGRES_PASSWORD: pedidos123
+    volumes:
+      - postgres-pedidos-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedidos -d pedidos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo-notificacoes:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: notificacoes
+      MONGO_INITDB_ROOT_PASSWORD: notificacoes123
+    volumes:
+      - mongo-notificacoes-dados:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: loja
+      RABBITMQ_DEFAULT_PASS: loja123
+    ports:
+      - "15672:15672" # painel de gerenciamento: http://localhost:15672 (loja / loja123)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+
+  ms-catalogo:
+    build: ./ms-catalogo
+    environment:
+      DB_HOST: mysql-catalogo
+      DB_NAME: catalogo
+      DB_USER: catalogo
+      DB_PASSWORD: catalogo123
+    depends_on:
+      mysql-catalogo:
+        condition: service_healthy
+
+  ms-pedidos:
+    build: ./ms-pedidos
+    environment:
+      CATALOGO_URL: http://ms-catalogo:3000
+      DB_HOST: postgres-pedidos
+      DB_NAME: pedidos
+      DB_USER: pedidos
+      DB_PASSWORD: pedidos123
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: loja
+      RABBITMQ_PASSWORD: loja123
+    depends_on:
+      postgres-pedidos:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ms-catalogo:
+        condition: service_started
+
+  ms-notificacoes:
+    build: ./ms-notificacoes
+    environment:
+      PEDIDOS_URL: http://ms-pedidos:8000
+      MONGODB_URI: mongodb://notificacoes:notificacoes123@mongo-notificacoes:27017/notificacoes?authSource=admin
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: loja
+      RABBITMQ_PASSWORD: loja123
+    depends_on:
+      mongo-notificacoes:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ms-pedidos:
+        condition: service_started
+
+  # Imita o NGINX Ingress: roteia /produtos, /pedidos e /notificacoes
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./docker/nginx-local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - ms-catalogo
+      - ms-pedidos
+      - ms-notificacoes
+
+volumes:
+  mysql-catalogo-dados:
+  postgres-pedidos-dados:
+  mongo-notificacoes-dados:
