@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-notificacoes
+  namespace: loja
+  labels:
+    app: ms-notificacoes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-notificacoes
+  template:
+    metadata:
+      labels:
+        app: ms-notificacoes
+    spec:
+      containers:
+        - name: ms-notificacoes
+          image: ms-notificacoes:latest # substituído por <registry>/ms-notificacoes:<tag> em scripts/deploy
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: POD_NAME # Downward API
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PEDIDOS_URL # Service Discovery: nome do Service do ms-pedidos
+              value: http://ms-pedidos:8000
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-notificacoes-credentials
+                  key: user
+            - name: MONGO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-notificacoes-credentials
+                  key: password
+            - name: MONGO_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-notificacoes-credentials
+                  key: database
+            - name: MONGODB_URI # $(VAR) é expandido pelo Kubernetes a partir das variáveis acima
+              value: mongodb://$(MONGO_USER):$(MONGO_PASSWORD)@mongo-notificacoes:27017/$(MONGO_DATABASE)?authSource=admin
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: user
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi

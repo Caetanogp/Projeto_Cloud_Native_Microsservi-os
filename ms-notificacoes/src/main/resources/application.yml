@@ -1,0 +1,30 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: ms-notificacoes
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://notificacoes:notificacoes123@mongo-notificacoes:27017/notificacoes?authSource=admin}
+      auto-index-creation: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:loja}
+    password: ${RABBITMQ_PASSWORD:loja123}
+    listener:
+      simple:
+        default-requeue-rejected: false # mensagem com erro vai para a DLQ, sem loop infinito
+        missing-queues-fatal: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 5s
+
+# Service Discovery: o ms-pedidos é acessado pelo nome do Service, nunca por IP de Pod.
+pedidos:
+  url: ${PEDIDOS_URL:http://ms-pedidos:8000}

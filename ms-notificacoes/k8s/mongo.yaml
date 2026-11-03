@@ -1,0 +1,95 @@
+# Banco exclusivo do ms-notificacoes (Database per Service).
+# Nenhum outro microsserviço recebe estas credenciais nem enxerga este banco.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-notificacoes-credentials
+  namespace: loja
+type: Opaque
+stringData:
+  database: notificacoes
+  user: notificacoes
+  password: notificacoes123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-notificacoes
+  namespace: loja
+  labels:
+    app: mongo-notificacoes
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo-notificacoes
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo-notificacoes
+  namespace: loja
+  labels:
+    app: mongo-notificacoes
+spec:
+  serviceName: mongo-notificacoes
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-notificacoes
+  template:
+    metadata:
+      labels:
+        app: mongo-notificacoes
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-notificacoes-credentials
+                  key: user
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-notificacoes-credentials
+                  key: password
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /data/db
+              subPath: mongo
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 2Gi
