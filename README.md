@@ -55,4 +55,4 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/cont
 - [docs/arquitetura.md](docs/arquitetura.md): arquitetura e mapa requisito → evidência
 - [docs/deploy-eks.md](docs/deploy-eks.md): criação do cluster e deploy
 - [docs/roteiro-apresentacao.md](docs/roteiro-apresentacao.md): roteiro da demonstração em sala
-- [docs/git-equipe.md](docs/git-equipe.md): como cada integrante comita a sua parte
+
