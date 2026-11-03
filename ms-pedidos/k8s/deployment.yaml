@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-pedidos
+  namespace: loja
+  labels:
+    app: ms-pedidos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-pedidos
+  template:
+    metadata:
+      labels:
+        app: ms-pedidos
+    spec:
+      containers:
+        - name: ms-pedidos
+          image: ms-pedidos:latest # substituído por <registry>/ms-pedidos:<tag> em scripts/deploy
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: POD_NAME # Downward API
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CATALOGO_URL # Service Discovery: nome do Service do catálogo
+              value: http://ms-catalogo:3000
+            - name: DB_HOST
+              value: postgres-pedidos
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: database
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: password
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: user
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: password
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi

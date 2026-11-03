@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-pedidos
+  namespace: loja
+  labels:
+    app: ms-pedidos
+spec:
+  type: ClusterIP
+  selector:
+    app: ms-pedidos
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

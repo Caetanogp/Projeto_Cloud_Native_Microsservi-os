@@ -1,0 +1,99 @@
+# Banco exclusivo do ms-pedidos (Database per Service).
+# Nenhum outro microsserviço recebe estas credenciais nem enxerga este banco.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-pedidos-credentials
+  namespace: loja
+type: Opaque
+stringData:
+  database: pedidos
+  user: pedidos
+  password: pedidos123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-pedidos
+  namespace: loja
+  labels:
+    app: postgres-pedidos
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-pedidos
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-pedidos
+  namespace: loja
+  labels:
+    app: postgres-pedidos
+spec:
+  serviceName: postgres-pedidos
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-pedidos
+  template:
+    metadata:
+      labels:
+        app: postgres-pedidos
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-pedidos-credentials
+                  key: password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 2Gi
