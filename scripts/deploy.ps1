@@ -1,4 +1,4 @@
-# Uso: .\scripts\deploy.ps1 -Registry <registry> [-Tag latest]
+﻿# Uso: .\scripts\deploy.ps1 -Registry <registry> [-Tag latest]
 # Renderiza o kustomize, troca as imagens locais pelas do registry e aplica no cluster atual.
 param(
     [Parameter(Mandatory = $true)][string]$Registry,
@@ -25,7 +25,7 @@ foreach ($d in "ms-catalogo", "ms-pedidos", "ms-notificacoes") {
     kubectl -n loja rollout status "deployment/$d" --timeout=300s
 }
 
-kubectl -n loja get pods, svc, ingress -o wide
+kubectl -n loja get pods,svc,ingress -o wide
 Write-Host ""
 Write-Host "Hostname do Ingress (pode levar alguns minutos para resolver no DNS):"
 kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'

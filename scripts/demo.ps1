@@ -1,4 +1,4 @@
-# Demonstração do fluxo completo pelo Ingress (ou pelo gateway local do Docker Compose).
+﻿# Demonstração do fluxo completo pelo Ingress (ou pelo gateway local do Docker Compose).
 # Uso: .\scripts\demo.ps1 -BaseUrl http://<hostname-do-elb>      (local: http://localhost:8080)
 param([string]$BaseUrl = "http://localhost:8080")
 $ErrorActionPreference = "Stop"
