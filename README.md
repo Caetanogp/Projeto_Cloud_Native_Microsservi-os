@@ -40,14 +40,13 @@ Painel do RabbitMQ: http://localhost:15672 (usuário `loja`, senha `loja123`).
 
 ## Deploy no Amazon EKS
 
-Passo a passo em [docs/deploy-eks.md](docs/deploy-eks.md). Resumo:
+Passo a passo em [docs/deploy-eks.md](docs/deploy-eks.md). No AWS Academy Learner Lab (PowerShell):
 
-```bash
-eksctl create cluster -f infra/eks/cluster.yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/aws/deploy.yaml
-./scripts/build-push.sh <registry>
-./scripts/deploy.sh <registry>
-./scripts/demo.sh http://<hostname-do-elb>
+```powershell
+.\scripts\build-push.ps1 -Registry <conta>.dkr.ecr.us-east-1.amazonaws.com   # só na primeira vez
+.\scripts\eks-criar.ps1                                                       # cluster, nós, Ingress e aplicação
+.\scripts\demo.ps1 -BaseUrl http://<hostname-do-elb>
+.\scripts\eks-apagar.ps1                                                      # apaga tudo no fim
 ```
 
 ## Documentação

@@ -2,6 +2,8 @@
 
 Tempo sugerido: 12 a 15 minutos. Deixe tudo implantado e testado antes de entrar na sala, com um terminal para o `kubectl` e outro para os `curl`.
 
+**Use o Git Bash** para os comandos `kubectl` deste roteiro (o PowerShell 5.1 quebra as aspas dos `-o jsonpath`). Confirme antes de entrar na sala: `kubectl get pods -n loja` com tudo `Running` e `scripts/demo` passando.
+
 Antes de começar:
 
 ```bash
